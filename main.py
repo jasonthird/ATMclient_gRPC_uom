@@ -9,9 +9,8 @@ from decimal import *
 from kivy.config import Config
 from client_lib import AtmClient
 
-from kivy.uix.widget import Widget
 
-getcontext().prec = 13 + 4
+getcontext().prec = 23
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')  # disable the right click red dot
 
 host = "localhost"
@@ -41,13 +40,12 @@ class AuthPage(Screen):
                 grpcClient = AtmClient(str(name), int(pin), host, port)
                 grpcClient.connect()
                 authResponce = grpcClient.authenticate()
-                if authResponce == "Error with request":
-                    popupError("Error with request")
-                elif authResponce == "Invalid credentials":
-                    popupError(authResponce)
-                elif authResponce == "Authenticated":
+                if authResponce == "Authenticated":
                     self.manager.current = 'choose'
                     self.manager.get_screen('choose').updateBalance()
+                else:
+                    popupError(authResponce)
+
         except Exception as e:
             print(e)
             popupError("Server is offline")
@@ -60,7 +58,8 @@ class ChoosePage(Screen):
             if balance == "Error with request":
                 popupError("Error with request")
             else:
-                self.ids.balance.text = str(balance)
+                money = round(balance, 2)
+                self.ids.balance.text = str(money)
         except Exception as e:
             print(e)
             popupError("Server is offline")
@@ -81,7 +80,6 @@ class WithdrawPage(Screen):
             else:
                 value = Decimal(value)
                 withdrawResponce = grpcClient.withdraw(value)
-                print(withdrawResponce)
                 if withdrawResponce!="Withdrawn":
                     popupError(withdrawResponce)
                 else:
@@ -101,8 +99,6 @@ class DepositPage(Screen):
         try:
             if value == "":
                 popupError("Please fill in the value field")
-            elif not value.isdigit():
-                popupError("Amount must be a number")
             else:
                 depositResponce = grpcClient.deposit(Decimal(value))
                 if depositResponce!="Deposited":
